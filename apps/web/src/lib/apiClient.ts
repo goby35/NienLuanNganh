@@ -112,6 +112,7 @@ export default class ApiClient {
     rewardPoints: number
     deadline?: string
     checklist?: Array<{ itemText: string; orderIndex?: number }>
+    resources?: Array<{ type: string; label: string; url?: string; description?: string }>
   }) {  
     try { 
       return await this.request('/tasks', { method: 'POST', body: JSON.stringify(payload) })
@@ -256,6 +257,15 @@ export default class ApiClient {
 
   async adjustUserPoints(profileId: string, payload: { rewardPoints?: number; reputationScore?: number }) {
     return this.request(`/users/${encodeURIComponent(profileId).toLowerCase()}/adjust-points`, { method: 'POST', body: JSON.stringify(payload) })
+  }
+
+  /**
+   * Get freelancer ratings from completed tasks
+   * @param profileId - Freelancer's profile ID
+   * @returns Promise<Array<{ rating: number; comment: string | null }>>
+   */
+  async getFreelancerRatings(profileId: string): Promise<Array<{ rating: number; comment: string | null }>> {
+    return this.request(`/applications/freelancer/${encodeURIComponent(profileId).toLowerCase()}/ratings`, { method: 'GET' })
   }
 
   // ==================== NOTIFICATIONS ====================

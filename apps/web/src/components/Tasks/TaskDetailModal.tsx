@@ -212,6 +212,7 @@ const TaskDetailModal = ({
         objective: freshTask.objective,
         deliverables: freshTask.deliverables,
         acceptanceCriteria: freshTask.acceptanceCriteria,
+        resources: freshTask.resources || [],
         skills: freshTask.skills || [],
         location: freshTask.location || "",
         salary: freshTask.salary || "",
@@ -433,6 +434,42 @@ const TaskDetailModal = ({
                   <p className="rounded-lg bg-gray-50 p-3 text-gray-600 text-sm dark:bg-gray-800 dark:text-gray-400">
                     {task.acceptanceCriteria}
                   </p>
+                </div>
+              )}
+
+              {/* Resources */}
+              {task.resources && task.resources.length > 0 && (
+                <div>
+                  <h6 className="mb-2 font-medium text-gray-700 text-sm dark:text-gray-300">
+                    Resources
+                  </h6>
+                  <div className="space-y-2">
+                    {task.resources.map((resource, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800"
+                      >
+                        <span className="font-medium text-gray-700 text-sm dark:text-gray-300">
+                          {resource.label}
+                        </span>
+                        {resource.url && (
+                          <a
+                            href={resource.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 text-sm hover:underline dark:text-blue-400"
+                          >
+                            {resource.url}
+                          </a>
+                        )}
+                        {resource.description && (
+                          <span className="text-gray-500 text-xs dark:text-gray-400">
+                            - {resource.description}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

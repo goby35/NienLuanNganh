@@ -23,6 +23,19 @@ export interface TaskApplicant {
   applicantProfileId?: string;
 }
 
+export interface TaskResource {
+  type:
+    | "figma"
+    | "api_spec"
+    | "mock_data"
+    | "repo_url"
+    | "technical_contact"
+    | "other";
+  label: string;
+  url?: string;
+  description?: string;
+}
+
 export interface TaskItem {
   id: string;
   companyLogo: string;
@@ -46,6 +59,7 @@ export interface TaskItem {
   objective?: string;
   deliverables?: string;
   acceptanceCriteria?: string;
+  resources?: TaskResource[];
   status: "open" | "in_review" | "in_progress" | "completed" | "cancelled";
   assigneeId?: string;
   applicants: TaskApplicant[];

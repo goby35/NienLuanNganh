@@ -6,7 +6,7 @@ import {
   PageSize,
   type PostsRequest,
   PostType,
-  usePostsQuery
+  usePostsQuery,
 } from "@slice/indexer";
 import { useCallback, useMemo } from "react";
 import SinglePost from "@/components/Post/SinglePost";
@@ -26,7 +26,8 @@ const EMPTY_MESSAGES: Record<AccountFeedType, string> = {
   [AccountFeedType.Feed]: "has nothing in their feed yet!",
   [AccountFeedType.Media]: "has no media yet!",
   [AccountFeedType.Replies]: "hasn't replied yet!",
-  [AccountFeedType.Collects]: "hasn't collected anything yet!"
+  [AccountFeedType.Collects]: "hasn't collected anything yet!",
+  [AccountFeedType.Ratings]: "has no ratings yet!",
 };
 
 const AccountFeed = ({ username, address, type }: AccountFeedProps) => {
@@ -43,7 +44,7 @@ const AccountFeed = ({ username, address, type }: AccountFeedProps) => {
           PostType.Root,
           PostType.Comment,
           PostType.Repost,
-          PostType.Quote
+          PostType.Quote,
         ];
     }
   }, [type]);
@@ -62,22 +63,22 @@ const AccountFeed = ({ username, address, type }: AccountFeedProps) => {
               MainContentFocus.Image,
               MainContentFocus.Audio,
               MainContentFocus.Video,
-              MainContentFocus.ShortVideo
-            ]
-          }
+              MainContentFocus.ShortVideo,
+            ],
+          },
         }),
         ...(type === AccountFeedType.Collects
           ? { collectedBy: { account: address } }
-          : { authors: [address] })
+          : { authors: [address] }),
       },
-      pageSize: PageSize.Fifty
+      pageSize: PageSize.Fifty,
     }),
     [address, postTypes, type]
   );
 
   const { data, error, fetchMore, loading } = usePostsQuery({
     skip: !address,
-    variables: { request }
+    variables: { request },
   });
 
   const posts = data?.posts?.items;
@@ -89,7 +90,7 @@ const AccountFeed = ({ username, address, type }: AccountFeedProps) => {
   const handleEndReached = useCallback(async () => {
     if (hasMore) {
       await fetchMore({
-        variables: { request: { ...request, cursor: pageInfo?.next } }
+        variables: { request: { ...request, cursor: pageInfo?.next } },
       });
     }
   }, [fetchMore, hasMore, pageInfo?.next, request]);

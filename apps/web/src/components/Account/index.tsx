@@ -14,7 +14,7 @@ import PageLayout from "@/components/Shared/PageLayout";
 import { EmptyState } from "@/components/Shared/UI";
 import {
   getBlockedByMeMessage,
-  getBlockedMeMessage
+  getBlockedMeMessage,
 } from "@/helpers/getBlockedMessage";
 import { useAccountLinkStore } from "@/store/non-persisted/navigation/useAccountLinkStore";
 import { useAccountStore } from "@/store/persisted/useAccountStore";
@@ -22,6 +22,7 @@ import AccountFeed from "./AccountFeed";
 import DeletedDetails from "./DeletedDetails";
 import Details from "./Details";
 import FeedType from "./FeedType";
+import RatingsFeed from "./RatingsFeed";
 import AccountPageShimmer from "./Shimmer";
 import cn from "@/helpers/cn";
 
@@ -48,9 +49,9 @@ const ViewAccount = () => {
       request: {
         ...(address
           ? { address }
-          : { username: { localName: username as string } })
-      }
-    }
+          : { username: { localName: username as string } }),
+      },
+    },
   });
 
   const account = data?.account ?? cachedAccount;
@@ -89,10 +90,10 @@ const ViewAccount = () => {
     const message = isDeleted
       ? "Account Deleted"
       : isBlockedByMe
-        ? getBlockedByMeMessage(account)
-        : hasBlockedMe
-          ? getBlockedMeMessage(account)
-          : null;
+      ? getBlockedByMeMessage(account)
+      : hasBlockedMe
+      ? getBlockedMeMessage(account)
+      : null;
 
     return (
       <EmptyState
@@ -108,24 +109,20 @@ const ViewAccount = () => {
       zeroTopMargin
       showProfileCard={false}
     >
-      <div className={cn("overflow-hidden rounded-2xl backdrop-blur-sm",)}>
-        <Cover
-        cover={
-          account?.metadata?.coverPicture || "/cover.png"
-        }
-      />
-      {renderAccountDetails()}
+      <div className={cn("overflow-hidden rounded-2xl backdrop-blur-sm")}>
+        <Cover cover={account?.metadata?.coverPicture || "/cover.png"} />
+        {renderAccountDetails()}
       </div>
       {isDeleted || isBlockedByMe || hasBlockedMe ? (
         renderEmptyState()
       ) : (
         <>
           <FeedType feedType={feedType} setFeedType={setFeedType} />
-          {currentAccount?.address === account?.address && (
+          {/* {currentAccount?.address === account?.address && (
             <div className="mb-3">
               <NewPost />
             </div>
-          )}
+          )} */}
           {(feedType === AccountFeedType.Feed ||
             feedType === AccountFeedType.Replies ||
             feedType === AccountFeedType.Media ||
@@ -133,6 +130,12 @@ const ViewAccount = () => {
             <AccountFeed
               address={account.address}
               type={feedType}
+              username={accountInfo.usernameWithPrefix}
+            />
+          )}
+          {feedType === AccountFeedType.Ratings && (
+            <RatingsFeed
+              address={account.address}
               username={accountInfo.usernameWithPrefix}
             />
           )}

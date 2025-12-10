@@ -93,6 +93,7 @@ const TaskDetailPage = () => {
     objective: taskData.objective,
     deliverables: taskData.deliverables,
     acceptanceCriteria: taskData.acceptanceCriteria,
+    resources: taskData.resources || [],
     skills: taskData.skills || [],
     location: taskData.location || "",
     salary: taskData.salary || "",
@@ -369,6 +370,42 @@ const TaskDetailPage = () => {
                 <p className="whitespace-pre-wrap text-gray-600 text-sm leading-relaxed dark:text-gray-300">
                   {task.acceptanceCriteria}
                 </p>
+              </div>
+            )}
+
+            {/* Resources */}
+            {task.resources && task.resources.length > 0 && (
+              <div>
+                <H5 className="mb-2 text-gray-900 dark:text-white">
+                  Resources
+                </H5>
+                <div className="space-y-2">
+                  {task.resources.map((resource, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800"
+                    >
+                      <span className="font-medium text-gray-700 text-sm dark:text-gray-300">
+                        {resource.label}
+                      </span>
+                      {resource.url && (
+                        <a
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 text-sm hover:underline dark:text-blue-400"
+                        >
+                          {resource.url}
+                        </a>
+                      )}
+                      {resource.description && (
+                        <span className="text-gray-500 text-xs dark:text-gray-400">
+                          - {resource.description}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

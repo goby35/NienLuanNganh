@@ -1,4 +1,8 @@
-import { CalendarIcon, MapPinIcon } from "@heroicons/react/24/outline";
+import {
+  CalendarIcon,
+  MapPinIcon,
+  BriefcaseIcon,
+} from "@heroicons/react/24/outline";
 import { CheckBadgeIcon } from "@heroicons/react/24/solid";
 import { STATIC_IMAGES_URL, TRANSFORMS } from "@slice/data/constants";
 import getAccount from "@slice/helpers/getAccount";
@@ -34,7 +38,7 @@ interface DetailsProps {
 const Details = ({
   isBlockedByMe = false,
   hasBlockedMe = false,
-  account
+  account,
 }: DetailsProps) => {
   const navigate = useNavigate();
   const { currentAccount } = useAccountStore();
@@ -43,14 +47,26 @@ const Details = ({
   const { theme } = useTheme();
   const [reputation, setReputation] = useState<number>(0);
   const [level, setLevel] = useState<number>(1);
+  const [professionalRoles, setProfessionalRoles] = useState<string[]>([]);
 
   useEffect(() => {
     const loadUserReputation = async () => {
       try {
         if (!account?.address) return;
         const data = await apiClient.getUser(account.address);
-        setReputation(typeof data?.reputationScore === "number" ? data.reputationScore : Number(data?.reputation) || 0);
+        setReputation(
+          typeof data?.reputationScore === "number"
+            ? data.reputationScore
+            : Number(data?.reputation) || 0
+        );
         setLevel(Number(data?.level) || 1);
+        // Load professional roles
+        if (data?.professionalRoles) {
+          const roles = Array.isArray(data.professionalRoles)
+            ? data.professionalRoles
+            : [];
+          setProfessionalRoles(roles);
+        }
       } catch (err) {
         console.error("Failed to load user reputation", err);
       }
@@ -112,7 +128,11 @@ const Details = ({
         </div>
         <div className="flex items-center gap-x-2 pt-2">
           {currentAccount?.address === account.address ? (
-            <Button onClick={() => navigate("/settings")} outline className="button-animated">
+            <Button
+              onClick={() => navigate("/settings")}
+              outline
+              className="button-animated"
+            >
               Edit Account
             </Button>
           ) : isBlockedByMe || hasBlockedMe ? null : (
@@ -159,6 +179,20 @@ const Details = ({
           </Markup>
         </div>
       ) : null}
+      {/* Professional Roles Display */}
+      {!isBlockedByMe && !hasBlockedMe && professionalRoles.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {professionalRoles.map((role, index) => (
+            <span
+              key={index}
+              className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-3 py-1 text-xs font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
+            >
+              <BriefcaseIcon className="size-3" />
+              {role}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="space-y-5">
         <Followerings account={account} />
         {!isBlockedByMe &&
@@ -195,7 +229,9 @@ const Details = ({
               alt="X Logo"
               className="size-4"
               height={16}
-              src={`${STATIC_IMAGES_URL}/brands/${theme === "dark" ? "x-dark.png" : "x-light.png"}`}
+              src={`${STATIC_IMAGES_URL}/brands/${
+                theme === "dark" ? "x-dark.png" : "x-light.png"
+              }`}
               width={16}
             />
           )}
@@ -203,7 +239,7 @@ const Details = ({
             Joined {dayjs(account.createdAt).format("MMM YYYY")}
           </MetaDetails>
         </div>
-        
+
         {/* Reputation Progress Bar - chỉ hiển thị cho chính chủ account */}
         {currentAccount?.address === account.address && (
           <div className="space-y-2 pt-3">
@@ -222,7 +258,7 @@ const Details = ({
               />
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-              <span>Level {level}</span>
+              {/* <span>Level {level}</span> */}
               <span>Reach 100 to level up</span>
             </div>
           </div>
