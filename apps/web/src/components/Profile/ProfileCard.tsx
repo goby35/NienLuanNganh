@@ -18,11 +18,13 @@ interface User {
   reputationScore: number;
   rewardPoints: number;
   level: number;
+  isWarned: boolean;
+  isBanned: boolean;
   createdAt: string;
 }
 
 interface ProfileCardProps {
-  /** 
+  /**
    * home  = chỉ hiển thị info + followers / following
    * tasks = hiển thị thêm reputation progress + reward points
    */
@@ -42,7 +44,7 @@ const ProfileCard = ({ variant = "home" }: ProfileCardProps) => {
   // Stats followers / following - ALWAYS call hooks
   const { data: statsData } = useAccountStatsQuery({
     variables: { request: { account: currentAccount?.address || "" } },
-    skip: !currentAccount?.address
+    skip: !currentAccount?.address,
   });
 
   useEffect(() => {
@@ -65,7 +67,9 @@ const ProfileCard = ({ variant = "home" }: ProfileCardProps) => {
               ? data.rewardPoints
               : Number(data?.points) || 0,
           level: Number(data?.level) || 0,
-          createdAt: data?.createdAt || new Date().toISOString()
+          isWarned: data?.isWarned ?? false,
+          isBanned: data?.isBanned ?? false,
+          createdAt: data?.createdAt || new Date().toISOString(),
         });
       } catch (err) {
         console.error("Failed to load user profile", err);
@@ -105,7 +109,9 @@ const ProfileCard = ({ variant = "home" }: ProfileCardProps) => {
     accountInfo?.usernameWithPrefix ||
     (usernameFromBackend ? `@${usernameFromBackend}` : "") ||
     (currentAccount.address
-      ? `@${currentAccount.address.slice(0, 6)}…${currentAccount.address.slice(-4)}`
+      ? `@${currentAccount.address.slice(0, 6)}…${currentAccount.address.slice(
+          -4
+        )}`
       : "@unknown");
 
   // Bio
@@ -134,129 +140,161 @@ const ProfileCard = ({ variant = "home" }: ProfileCardProps) => {
           "dark:border-gray-700 dark:bg-black"
         )}
       >
-      {/* Phần trên: Cover */}
-      <div className="relative h-24 sm:h-28">
-        {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt="Cover"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-r from-brand-500/70 via-brand-300/60 to-brand-500/70" />
-        )}
-
-        {/* Avatar overlap */}
-        <div className="absolute -bottom-10 left-4 flex items-center gap-3">
-          <div className="h-18 w-18 rounded-full border-[3px] bg-gray-100 overflow-hidden border-white dark:border-gray-950 dark:bg-gray-900 mb-0">
+        {/* Phần trên: Cover */}
+        <div className="relative h-24 sm:h-28">
+          {coverUrl ? (
             <img
-              src={avatarUrl}
-              alt={displayName}
+              src={coverUrl}
+              alt="Cover"
               className="h-full w-full object-cover"
-              loading="eager"
             />
-          </div>
-          {/* Desktop: tên + username */}
-          <div className="hidden sm:flex flex-col pt-6">
-            <div className="flex items-center gap-1">
-              <span className="text-base font-semibold text-gray-900 dark:text-white">
-                {displayName}
+          ) : (
+            <div className="h-full w-full bg-gradient-to-r from-brand-500/70 via-brand-300/60 to-brand-500/70" />
+          )}
+
+          {/* Avatar overlap */}
+          <div className="absolute -bottom-10 left-4 flex items-center gap-3">
+            <div className="h-18 w-18 rounded-full border-[3px] bg-gray-100 overflow-hidden border-white dark:border-gray-950 dark:bg-gray-900 mb-0">
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="h-full w-full object-cover"
+                loading="eager"
+              />
+            </div>
+            {/* Desktop: tên + username */}
+            <div className="hidden sm:flex flex-col pt-6">
+              <div className="flex items-center gap-1">
+                <span className="text-base font-semibold text-gray-900 dark:text-white">
+                  {displayName}
+                </span>
+                {(currentAccount as any)?.hasSubscribed && (
+                  <CheckBadgeIcon className="size-4 text-brand-500" />
+                )}
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {usernameWithPrefix}
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Phần dưới */}
+        <div className="pt-12 px-4 pb-4 space-y-4">
+          {/* Mobile: tên + username */}
+          <div className="sm:hidden">
+            <div className="flex items-center gap-1 text-base font-semibold text-gray-900 dark:text-white">
+              {displayName}
               {(currentAccount as any)?.hasSubscribed && (
                 <CheckBadgeIcon className="size-4 text-brand-500" />
               )}
             </div>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               {usernameWithPrefix}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Phần dưới */}
-      <div className="pt-12 px-4 pb-4 space-y-4">
-        {/* Mobile: tên + username */}
-        <div className="sm:hidden">
-          <div className="flex items-center gap-1 text-base font-semibold text-gray-900 dark:text-white">
-            {displayName}
-            {(currentAccount as any)?.hasSubscribed && (
-              <CheckBadgeIcon className="size-4 text-brand-500" />
-            )}
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {usernameWithPrefix}
-          </div>
-        </div>
-
-        {/* Bio */}
-        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
-          {bio}
-        </p>
-
-        {variant === "home" ? (
-          /* ========== HOME: Followers / Following ========== */
-          <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
-            <span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {humanize(following)}
-              </span>{" "}
-              Following
-            </span>
-            <span>
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {humanize(followers)}
-              </span>{" "}
-              Followers
-            </span>
-          </div>
-        ) : (
-          /* ========== TASKS: Reputation + Reward ========== */
-          <>
-            {/* Progress + Level */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500 dark:text-gray-400">
-                  Reputation progress
-                </span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
-                  {reputation}
-                </span>
-              </div>
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 transition-all duration-500"
-                  style={{ width: `${progressWidth}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>Level {level}</span>
-                <span>Reach 100 to level up</span>
-              </div>
             </div>
+          </div>
 
-            {/* Reward points */}
-            <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-900/60">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Reward Points
-                </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {rewardPoints.toLocaleString()}
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-medium text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300">
-                  💎 Loyal Contributor
-                </span>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Earn more by completing tasks
-                </span>
-              </div>
+          {/* Bio */}
+          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
+            {bio}
+          </p>
+
+          {variant === "home" ? (
+            /* ========== HOME: Followers / Following ========== */
+            <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+              <span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {humanize(following)}
+                </span>{" "}
+                Following
+              </span>
+              <span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  {humanize(followers)}
+                </span>{" "}
+                Followers
+              </span>
             </div>
-          </>
-        )}
-      </div>
-    </Card>
+          ) : (
+            /* ========== TASKS: Reputation + Reward ========== */
+            <>
+              {/* Status Badge for Warned/Banned */}
+              {user?.isBanned && (
+                <div className="rounded-lg bg-red-100 px-3 py-2 text-center dark:bg-red-900/30">
+                  <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                    🚫 Tài khoản bị khóa
+                  </span>
+                </div>
+              )}
+              {user?.isWarned && !user?.isBanned && (
+                <div className="rounded-lg bg-yellow-100 px-3 py-2 text-center dark:bg-yellow-900/30">
+                  <span className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
+                    ⚠️ Cảnh báo: Điểm uy tín thấp
+                  </span>
+                </div>
+              )}
+
+              {/* Progress + Level */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Reputation progress
+                  </span>
+                  <span
+                    className={cn(
+                      "font-medium",
+                      user?.isBanned
+                        ? "text-red-600 dark:text-red-400"
+                        : user?.isWarned
+                        ? "text-yellow-600 dark:text-yellow-400"
+                        : "text-gray-900 dark:text-gray-100"
+                    )}
+                  >
+                    {reputation}
+                  </span>
+                </div>
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      user?.isBanned
+                        ? "bg-gradient-to-r from-red-400 to-red-600"
+                        : user?.isWarned
+                        ? "bg-gradient-to-r from-yellow-400 to-orange-500"
+                        : "bg-gradient-to-r from-yellow-400 to-yellow-600"
+                    )}
+                    style={{ width: `${progressWidth}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span>Level {level}</span>
+                  <span>Reach 100 to level up</span>
+                </div>
+              </div>
+
+              {/* Reward points */}
+              <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-900/60">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Reward Points
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {rewardPoints.toLocaleString()}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-medium text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300">
+                    💎 Loyal Contributor
+                  </span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Earn more by completing tasks
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </Card>
     </Link>
   );
 };

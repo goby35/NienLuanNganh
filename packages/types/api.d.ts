@@ -27,6 +27,8 @@ export interface User {
   rewardPoints: number;
   level: number;
   professionalRoles?: string[] | null;
+  isWarned: boolean;
+  isBanned: boolean;
   createdAt: string;
   updatedAt: string;
 }

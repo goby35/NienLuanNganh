@@ -241,7 +241,7 @@ const Details = ({
         </div>
 
         {/* Reputation Progress Bar - chỉ hiển thị cho chính chủ account */}
-        {currentAccount?.address === account.address && (
+        {
           <div className="space-y-2 pt-3">
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-500 dark:text-gray-400">
@@ -262,7 +262,7 @@ const Details = ({
               <span>Reach 100 to level up</span>
             </div>
           </div>
-        )}
+        }
       </div>
     </div>
   );

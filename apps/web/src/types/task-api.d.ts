@@ -102,6 +102,8 @@ export interface User {
   reputationScore: number;
   rewardPoints: number;
   level: number;
+  isWarned: boolean;
+  isBanned: boolean;
   createdAt: string;
 }
 
