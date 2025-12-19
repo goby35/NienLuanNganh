@@ -42,7 +42,7 @@ const Signless = () => {
       <div className="flex flex-col gap-y-1.5">
         <b>Enable signless transactions</b>
         <H6 className="font-normal text-gray-500 dark:text-gray-200">
-          You can enable Signless to interact with Hey without signing any of
+          You can enable Signless to interact with Slice without signing any of
           your transactions.
         </H6>
       </div>

@@ -19,7 +19,7 @@ const Success = () => {
 
   return (
     <div className="m-8 flex flex-col items-center justify-center">
-      <H4>Waaa-hey! You got your group!</H4>
+      <H4>Waaa-slice! You got your group!</H4>
       <div className="mt-3 text-center font-semibold text-gray-500 dark:text-gray-200">
         Welcome to decentralised social where everything is sooooooooooooo much
         better! 🎉

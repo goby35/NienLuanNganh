@@ -30,7 +30,7 @@ const Auth = () => {
           {isConnected ? (
             hasAccounts ? (
               <AuthMessage
-                description="Hey uses this signature to verify that you're the owner of this address."
+                description="Slice uses this signature to verify that you're the owner of this address."
                 title="Please sign the message."
               />
             ) : (

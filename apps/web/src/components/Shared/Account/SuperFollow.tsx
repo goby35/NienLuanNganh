@@ -69,7 +69,7 @@ const SuperFollow = () => {
           <Slug slug={getAccount(superFollowingAccount).usernameWithPrefix} />
         </H5>
         <div className="text-gray-500 dark:text-gray-200">
-          Support your favorite people on Hey.
+          Support your favorite people on Slice.
         </div>
       </div>
       <div className="flex items-center space-x-1.5 py-2">
