@@ -104,8 +104,41 @@ const PersonalizeSettingsForm = () => {
     formData?: z.infer<typeof ValidationSchema>
   ) => {
     await waitForTransactionToComplete(hash);
+    
+    // Optimistic update: Update UI immediately with form data
+    // since Lens indexer may take time to process
+    if (currentAccount && formData) {
+      // Preserve existing attributes not being edited
+      const existingAttributes = currentAccount.metadata?.attributes?.filter(
+        (attr) => !["location", "website", "x", "timestamp"].includes(attr.key)
+      ) || [];
+      
+      const optimisticAccount = {
+        ...currentAccount,
+        metadata: {
+          ...currentAccount.metadata,
+          name: formData.name || currentAccount.metadata?.name,
+          bio: formData.bio || currentAccount.metadata?.bio,
+          attributes: [
+            ...existingAttributes,
+            ...(formData.location ? [{ key: "location", value: formData.location, type: "String" as const }] : []),
+            ...(formData.website ? [{ key: "website", value: formData.website, type: "String" as const }] : []),
+            ...(formData.x ? [{ key: "x", value: formData.x, type: "String" as const }] : []),
+            { key: "timestamp", value: new Date().toISOString(), type: "String" as const }
+          ]
+        },
+      };
+      setCurrentAccount(optimisticAccount as typeof currentAccount);
+    }
+
+    // Also try to fetch from API (may still return old data due to indexer lag)
     const accountData = await getCurrentAccountDetails();
-    setCurrentAccount(accountData?.data?.me.loggedInAs.account);
+    const fetchedAccount = accountData?.data?.me?.loggedInAs?.account;
+    
+    // Only update if fetched data is newer (has our changes)
+    if (fetchedAccount?.metadata?.name === formData?.name) {
+      setCurrentAccount(fetchedAccount);
+    }
 
     // Sync username and professionalRoles to slice-api
     if (currentAccount?.address && formData) {
@@ -146,7 +179,7 @@ const PersonalizeSettingsForm = () => {
     }
 
     setIsSubmitting(false);
-    toast.success("Account updated");
+    toast.success("Changes saved on-chain. UI updated.");
   };
 
   const onError = useCallback((error: ApolloClientError) => {

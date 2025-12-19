@@ -5,7 +5,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Button, H5, Modal, Tabs } from "@/components/Shared/UI";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/apiClient";
 import { useAccountStore } from "@/store/persisted/useAccountStore";
 import { TaskItem } from "./TaskCard";
@@ -40,24 +40,57 @@ const TaskDetailModal = ({
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [newDeadline, setNewDeadline] = useState("");
   const [isExtending, setIsExtending] = useState(false);
+  const [fullTask, setFullTask] = useState<TaskItem | null>(task);
+  const [isLoadingFullTask, setIsLoadingFullTask] = useState(false);
 
-  if (!task) return null;
+  // Fetch full task details when modal opens to get resources
+  useEffect(() => {
+    const fetchFullTaskData = async () => {
+      if (!task?.id || !isOpen) return;
+      
+      setIsLoadingFullTask(true);
+      try {
+        const taskData = await apiClient.getTask(task.id);
+        
+        const parsedTask: TaskItem = {
+          ...task,
+          resources: taskData.resources || [],
+          applicants: taskData.applications || task.applicants,
+        };
+        
+        setFullTask(parsedTask);
+        // console.log("[TaskDetailModal] Loaded resources:", taskData.resources);
+      } catch (err) {
+        console.error("Failed to fetch full task:", err);
+        setFullTask(task);
+      } finally {
+        setIsLoadingFullTask(false);
+      }
+    };
+
+    fetchFullTaskData();
+  }, [task?.id, isOpen]);
+
+  const activeTask = fullTask || task;
+  
+  if (!activeTask) return null;
 
   // Check if deadline has passed
-  const isDeadlinePassed = task.deadline
-    ? new Date() > new Date(task.deadline)
+  const isDeadlinePassed = activeTask.deadline
+    ? new Date() > new Date(activeTask.deadline)
     : false;
 
   const isOwner =
-    task.employerProfileId?.toLowerCase() ===
+    activeTask.employerProfileId?.toLowerCase() ===
     currentAccount?.address?.toLowerCase();
-  // console.log("task applicants", task.employerProfileId);
+
+  // console.log("task applicants", activeTask.employerProfileId);
   // console.log("current account", currentAccount?.address);
-  const hasApplied = task.applicants.some(
+  const hasApplied = activeTask.applicants.some(
     (applicant) =>
       applicant.applicantProfileId === currentAccount?.address.toLowerCase()
   );
-  const myApplication = task.applicants.find(
+  const myApplication = activeTask.applicants.find(
     (applicant) =>
       applicant.applicantProfileId === currentAccount?.address.toLowerCase()
   );
@@ -70,7 +103,7 @@ const TaskDetailModal = ({
 
   // Check if escrow is already settled (task completed or cancelled)
   const isEscrowSettled =
-    task.status === "completed" || task.status === "cancelled";
+    activeTask.status === "completed" || activeTask.status === "cancelled";
 
   // Logic to determine who can release funds after deadline
   const getDeadlineActionState = () => {
@@ -96,14 +129,14 @@ const TaskDetailModal = ({
 
     const isEmployer =
       currentAccount?.address?.toLowerCase() ===
-      task.employerProfileId?.toLowerCase();
+      activeTask.employerProfileId?.toLowerCase();
     const isFreelancer =
-      task.freelancerProfileId &&
+      activeTask.freelancerProfileId &&
       currentAccount?.address?.toLowerCase() ===
-        task.freelancerProfileId.toLowerCase();
+        activeTask.freelancerProfileId.toLowerCase();
 
     // Check if anyone was assigned (accepted)
-    const hasAcceptedFreelancer = task.applicants.some(
+    const hasAcceptedFreelancer = activeTask.applicants.some(
       (app) =>
         (app as any).status === "accepted" ||
         (app as any).status === "in_progress" ||
@@ -114,7 +147,7 @@ const TaskDetailModal = ({
 
     // CASE 0: No one was assigned before deadline
     // -> Task should be auto-cancelled (no escrow deposit made)
-    if (!hasAcceptedFreelancer && !task.freelancerProfileId) {
+    if (!hasAcceptedFreelancer && !activeTask.freelancerProfileId) {
       return {
         canClaim: false,
         actionType: "AUTO_CANCEL",
@@ -126,7 +159,7 @@ const TaskDetailModal = ({
     }
 
     // Check if Freelancer has pending submission (in_review or submitted)
-    const hasPendingSubmission = task.applicants.some(
+    const hasPendingSubmission = activeTask.applicants.some(
       (app) =>
         (app as any).status === "in_review" ||
         ((app as any).status === "accepted" && (app as any).outcome)
@@ -138,7 +171,7 @@ const TaskDetailModal = ({
       return {
         canClaim: true,
         actionType: "REFUND",
-        recipientAddress: task.employerProfileId,
+        recipientAddress: activeTask.employerProfileId,
         message:
           "Freelancer did not submit work before deadline. You can claim refund.",
         shouldAutoCancel: false,
@@ -151,7 +184,7 @@ const TaskDetailModal = ({
       return {
         canClaim: true,
         actionType: "CLAIM",
-        recipientAddress: task.freelancerProfileId,
+        recipientAddress: activeTask.freelancerProfileId,
         message:
           "You submitted work but employer did not respond before deadline. You can claim payment.",
         shouldAutoCancel: false,
@@ -176,7 +209,7 @@ const TaskDetailModal = ({
     if (!deadlineAction.shouldAutoCancel) return;
 
     try {
-      await apiClient.updateTask(task.id, { status: "cancelled" });
+      await apiClient.updateTask(activeTask.id, { status: "cancelled" });
       toast.info(
         "Task has been automatically cancelled (deadline passed, no freelancer assigned)"
       );
@@ -197,12 +230,12 @@ const TaskDetailModal = ({
     setIsExtending(true);
     try {
       // 1. Update deadline on backend
-      await apiClient.updateTask(task.id, {
+      await apiClient.updateTask(activeTask.id, {
         deadline: newDeadline,
       });
 
       // 2. Fetch fresh task data to ensure all state is current
-      const freshTask = await apiClient.getTask(task.id);
+      const freshTask = await apiClient.getTask(activeTask.id);
 
       // 3. Parse fresh task data (same logic as TaskDetailPage)
       const updatedTaskData: TaskItem = {
@@ -253,9 +286,9 @@ const TaskDetailModal = ({
 
   // Check if user is freelancer (assigned to task)
   const isFreelancer =
-    task.freelancerProfileId &&
+    activeTask.freelancerProfileId &&
     currentAccount?.address?.toLowerCase() ===
-      task.freelancerProfileId.toLowerCase();
+      activeTask.freelancerProfileId.toLowerCase();
 
   // Show escrow tab for employer or assigned freelancer
   // const showEscrowTab = isOwner || isFreelancer;
@@ -295,7 +328,7 @@ const TaskDetailModal = ({
     if (!confirm("Are you sure you want to cancel this task?")) return;
     setIsCancelling(true);
     try {
-      await apiClient.deleteTask(task.id);
+      await apiClient.deleteTask(activeTask.id);
       toast.success("Task cancelled");
       onClose();
     } catch (err: any) {
@@ -308,7 +341,7 @@ const TaskDetailModal = ({
   const tabList = [
     { name: "Details", type: "details" },
     {
-      name: `Applications (${task.applicants.length})`,
+      name: `Applications (${activeTask.applicants.length})`,
       type: "applications",
     },
   ];
@@ -328,47 +361,47 @@ const TaskDetailModal = ({
           {/* Header with status badge */}
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              {task.employerAvatar ? (
+              {activeTask.employerAvatar ? (
                 <img
-                  src={task.employerAvatar}
-                  alt={task.employerName}
+                  src={activeTask.employerAvatar}
+                  alt={activeTask.employerName}
                   className="h-12 w-12 rounded-full"
                 />
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-600 font-bold text-lg text-white">
-                  {task.employerName?.charAt(0) || "T"}
+                  {activeTask.employerName?.charAt(0) || "T"}
                 </div>
               )}
               <div>
-                <H5 className="text-gray-900 dark:text-white">{task.title}</H5>
+                <H5 className="text-gray-900 dark:text-white">{activeTask.title}</H5>
                 <p className="text-gray-600 text-sm dark:text-gray-400">
-                  {task.employerName || task.employerProfileId?.slice(0, 8)}
+                  {activeTask.employerName || activeTask.employerProfileId?.slice(0, 8)}
                 </p>
               </div>
             </div>
 
             <span
               className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(
-                task.status
+                activeTask.status
               )}`}
             >
-              {canSubmitOutcome && task.status === "in_progress"
+              {canSubmitOutcome && activeTask.status === "in_progress"
                 ? "IN PROGRESS"
-                : task.status.replace(/_/g, " ").toUpperCase()}
+                : activeTask.status.replace(/_/g, " ").toUpperCase()}
             </span>
           </div>
           {/* Meta info */}
           <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400">
-            {task.createdAt && (
+            {activeTask.createdAt && (
               <div className="flex items-center gap-1">
                 <ClockIcon className="h-4 w-4" />
-                <span>Posted {formatDate(task.createdAt)}</span>
+                <span>Posted {formatDate(activeTask.createdAt)}</span>
               </div>
             )}
-            {task.deadline && (
+            {activeTask.deadline && (
               <div className="flex items-center gap-1">
                 <CalendarIcon className="h-4 w-4" />
-                <span>Due {formatDate(task.deadline)}</span>
+                <span>Due {formatDate(activeTask.deadline)}</span>
               </div>
             )}
           </div>
@@ -395,56 +428,56 @@ const TaskDetailModal = ({
                       Completion Reward
                     </p>
                     <p className="font-bold text-2xl text-brand-600 dark:text-brand-400">
-                      {task.rewardPoints} {ERC20_TOKEN_SYMBOL}
+                      {activeTask.rewardPoints} {ERC20_TOKEN_SYMBOL}
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Objective */}
-              {task.objective && (
+              {activeTask.objective && (
                 <div>
                   <h6 className="mb-2 font-medium text-gray-700 text-sm dark:text-gray-300">
                     Main Objective
                   </h6>
                   <p className="rounded-lg bg-gray-50 p-3 text-gray-600 text-sm dark:bg-gray-800 dark:text-gray-400">
-                    {task.objective}
+                    {activeTask.objective}
                   </p>
                 </div>
               )}
 
               {/* Deliverables */}
-              {task.deliverables && (
+              {activeTask.deliverables && (
                 <div>
                   <h6 className="mb-2 font-medium text-gray-700 text-sm dark:text-gray-300">
                     Deliverables
                   </h6>
                   <p className="rounded-lg bg-gray-50 p-3 text-gray-600 text-sm dark:bg-gray-800 dark:text-gray-400">
-                    {task.deliverables}
+                    {activeTask.deliverables}
                   </p>
                 </div>
               )}
 
               {/* Acceptance Criteria */}
-              {task.acceptanceCriteria && (
+              {activeTask.acceptanceCriteria && (
                 <div>
                   <h6 className="mb-2 font-medium text-gray-700 text-sm dark:text-gray-300">
                     Acceptance Criteria
                   </h6>
                   <p className="rounded-lg bg-gray-50 p-3 text-gray-600 text-sm dark:bg-gray-800 dark:text-gray-400">
-                    {task.acceptanceCriteria}
+                    {activeTask.acceptanceCriteria}
                   </p>
                 </div>
               )}
 
               {/* Resources */}
-              {task.resources && task.resources.length > 0 && (
+              {activeTask.resources && activeTask.resources.length > 0 && (
                 <div>
                   <h6 className="mb-2 font-medium text-gray-700 text-sm dark:text-gray-300">
                     Resources
                   </h6>
                   <div className="space-y-2">
-                    {task.resources.map((resource, idx) => (
+                    {activeTask.resources.map((resource, idx) => (
                       <div
                         key={idx}
                         className="flex items-center gap-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800"
@@ -484,7 +517,7 @@ const TaskDetailModal = ({
                       <p className="text-orange-700 text-sm dark:text-orange-200">
                         {deadlineAction.message}
                       </p>
-                      {isOwner && task.status !== "cancelled" && (
+                      {isOwner && activeTask.status !== "cancelled" && (
                         <div className="rounded-lg border border-orange-300 bg-white p-3 dark:border-orange-700 dark:bg-gray-800">
                           <p className="mb-3 text-gray-600 text-sm dark:text-gray-400">
                             No escrow deposit was made since no freelancer was
@@ -550,17 +583,17 @@ const TaskDetailModal = ({
           >
             <ApplicationList
               key={refreshKey}
-              taskId={task.id}
-              taskStatus={task.status}
+              taskId={activeTask.id}
+              taskStatus={activeTask.status}
               isEmployer={isOwner}
               onApplicationUpdate={handleApplicationUpdate}
-              rewardPoints={task.rewardPoints}
+              rewardPoints={activeTask.rewardPoints}
               onOpenRate={(id: string) => setRatingAppId(id)}
-              taskExternalId={task.id}
-              taskRewardAmount={task.rewardPoints?.toString() || "100"}
-              taskDeadline={task.deadline}
-              employerAddress={task.employerProfileId}
-              freelancerAddress={task.freelancerProfileId || undefined}
+              taskExternalId={activeTask.id}
+              taskRewardAmount={activeTask.rewardPoints?.toString() || "100"}
+              taskDeadline={activeTask.deadline}
+              employerAddress={activeTask.employerProfileId}
+              freelancerAddress={activeTask.freelancerProfileId || undefined}
             />
           </div>
           {/* Submit Work Tab */}
@@ -601,11 +634,11 @@ const TaskDetailModal = ({
           {/* {activeTab === "escrow" && showEscrowTab && (
             <div className="mt-4">
               <EscrowManager
-                taskId={task.id}
-                freelancerAddress={task.freelancerProfileId || undefined}
-                employerAddress={task.employerProfileId}
+                taskId={activeTask.id}
+                freelancerAddress={activeTask.freelancerProfileId || undefined}
+                employerAddress={activeTask.employerProfileId}
                 currentUserAddress={currentAccount?.address}
-                defaultAmount={task.rewardPoints?.toString() || "100"}
+                defaultAmount={activeTask.rewardPoints?.toString() || "100"}
                 defaultDeadlineDays={7}
               />
             </div>
@@ -614,7 +647,7 @@ const TaskDetailModal = ({
           <div className="flex gap-3 border-gray-200 border-t pt-4 dark:border-gray-700">
             {isOwner ? (
               <>
-                {task.status === "open" && (
+                {activeTask.status === "open" && (
                   <div className="cursor-not-allowed text-gray-400">
                     <Button
                       className="flex-1"
@@ -637,10 +670,10 @@ const TaskDetailModal = ({
                   className="flex-1 disabled:opacity-30 disabled:text-gray-400"
                   onClick={() => {
                     // Only open apply modal for users who haven't applied and when task is open
-                    if (!hasApplied && task.status === "open")
+                    if (!hasApplied && activeTask.status === "open")
                       setShowApplyModal(true);
                   }}
-                  disabled={hasApplied || task.status !== "open"}
+                  disabled={hasApplied || activeTask.status !== "open"}
                   title={
                     hasApplied
                       ? "You have already applied for this task"
@@ -672,8 +705,8 @@ const TaskDetailModal = ({
       <ApplyModal
         isOpen={showApplyModal}
         onClose={() => setShowApplyModal(false)}
-        taskId={task.id}
-        taskTitle={task.title}
+        taskId={activeTask.id}
+        taskTitle={activeTask.title}
         onSuccess={handleApplicationUpdate}
       />
 
@@ -687,7 +720,7 @@ const TaskDetailModal = ({
           myApplication && (myApplication as any).status === "needs_revision"
         )}
         // profileId={currentAccount?.address || ""}
-        // rewardPoints={task.rewardPoints}
+        // rewardPoints={activeTask.rewardPoints}
         // reputationScore={1}
       />
       {/* Post Rate Modal - mounted and controlled by ratingAppId */}
@@ -715,8 +748,8 @@ const TaskDetailModal = ({
           <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
             <p className="text-blue-800 text-sm dark:text-blue-200">
               <strong>Current Deadline:</strong>{" "}
-              {task.deadline
-                ? new Date(task.deadline).toLocaleDateString("en-US", {
+              {activeTask.deadline
+                ? new Date(activeTask.deadline).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",

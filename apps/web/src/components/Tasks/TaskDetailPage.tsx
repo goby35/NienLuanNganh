@@ -137,6 +137,40 @@ const TaskDetailPage = () => {
       applicant.applicantProfileId === currentAccount?.address.toLowerCase()
   );
 
+  // Check if current user is the assigned freelancer
+  const isFreelancer =
+    task.freelancerProfileId &&
+    currentAccount?.address?.toLowerCase() ===
+      task.freelancerProfileId.toLowerCase();
+
+  // Check if task is restricted - only employer and freelancer can access
+  // Restricted statuses: in_progress, in_review, completed (matches backend logic)
+  const restrictedStatuses = ["in_progress", "in_review", "completed"];
+  const isRestrictedTask = restrictedStatuses.includes(task.status);
+  const hasAccessToRestrictedTask = isOwner || isFreelancer;
+
+  // If task is restricted and user is neither employer nor freelancer, deny access
+  if (isRestrictedTask && !hasAccessToRestrictedTask) {
+    return (
+      <PageLayout title="Task Not Found">
+        <Card className="p-8 text-center">
+          <H3 className="mb-4 text-gray-900 dark:text-white">Access Restricted</H3>
+          <p className="mb-6 text-gray-600 dark:text-gray-400">
+            This task is restricted. Only the employer and assigned
+            freelancer can view the details.
+          </p>
+          <button
+            onClick={() => navigate("/tasks")}
+            className="rounded-lg bg-brand-600 px-6 py-2 font-medium text-white transition-colors hover:bg-brand-700"
+            type="button"
+          >
+            Back to Tasks
+          </button>
+        </Card>
+      </PageLayout>
+    );
+  }
+
   const canSubmitOutcome =
     myApplication &&
     ((myApplication as any).status === "accepted" ||
@@ -144,6 +178,27 @@ const TaskDetailPage = () => {
 
   const handleApplicationUpdate = () => {
     setRefreshKey((prev) => prev + 1);
+  };
+
+  // Check if current user is an accepted freelancer (via application status)
+  const isAcceptedFreelancer = myApplication && 
+    (myApplication as any).status === "accepted";
+
+  // Determine if resources should be shown
+  // - Open tasks: Only employer sees resources
+  // - Accepted freelancer: Can see resources after being accepted
+  // - Assigned freelancer (in_progress+): Can see resources
+  const shouldShowResources = () => {
+    const result = isOwner || isFreelancer || isAcceptedFreelancer;
+    console.log("[TaskDetailPage] shouldShowResources?", {
+      isOwner,
+      isFreelancer,
+      isAcceptedFreelancer,
+      result,
+      taskResources: task.resources,
+      resourcesLength: task.resources?.length || 0
+    });
+    return result;
   };
 
   const formatDate = (dateString?: string) => {
@@ -374,7 +429,7 @@ const TaskDetailPage = () => {
             )}
 
             {/* Resources */}
-            {task.resources && task.resources.length > 0 && (
+            {task.resources && task.resources.length > 0 && shouldShowResources() && (
               <div>
                 <H5 className="mb-2 text-gray-900 dark:text-white">
                   Resources
