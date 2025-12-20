@@ -91,11 +91,11 @@ const Subscribe = () => {
       <div className="max-w-md text-center text-gray-500">
         {hasSubscribed ? (
           <div className="text-gray-500">
-            Thanks for being a valuable <b>Hey Pro</b> member!
+            Thanks for being a valuable <b>Slice Pro</b> member!
           </div>
         ) : (
           <>
-            Join Hey Pro for {" "}
+            Join Slice Pro for {" "}
             <b className="inline-flex items-center gap-x-1">
               {SUBSCRIPTION_AMOUNT}{" "}
               <Tooltip content={ERC20_TOKEN_SYMBOL} placement="top">
@@ -126,7 +126,7 @@ const Subscribe = () => {
             </div>
             <div className="flex items-center gap-x-1">
               <CheckCircleIcon className="size-4.5" />
-              <span className="text-sm">Exclusive Hey features</span>
+              <span className="text-sm">Exclusive Slice features</span>
             </div>
             <div className="flex items-center gap-x-1">
               <CheckCircleIcon className="size-4.5" />
@@ -134,7 +134,7 @@ const Subscribe = () => {
             </div>
             <div className="flex items-center gap-x-1">
               <CheckCircleIcon className="size-4.5" />
-              <span className="text-sm">Contribute to Hey's growth</span>
+              <span className="text-sm">Contribute to Slice's growth</span>
             </div>
           </div>
           {balanceLoading ? (

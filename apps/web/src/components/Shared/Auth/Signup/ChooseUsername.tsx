@@ -30,7 +30,7 @@ import cn from "@/helpers/cn";
 export const SignupMessage = () => (
   <AuthMessage
     description="Let's start by buying your username for you. Buying you say? Yep - usernames cost a little bit of money to support the network and keep bots away"
-    title="Welcome to Hey!"
+    title="Welcome to Slice!"
   />
 );
 
